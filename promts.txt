@@ -1,0 +1,135 @@
+================================================================================
+                        REGISTRO DE PROMPTS - PROTOTIPO LAB1
+================================================================================
+
+--------------------------------------------------------------------------------
+PROMPT #1 - Refactorización de Cliente.py (Separar lógica de entidad y negocio)
+--------------------------------------------------------------------------------
+
+Refactorizar la clase Cliente (Modelo/Entidades/Cliente.py) separando la lógica
+de entidad de la lógica de negocio, respetando las siguientes definiciones:
+
+  - Lógica de entidad: corresponde a los comportamientos propios de la entidad,
+    relacionados directamente con su estado, atributos e invariantes. La entidad
+    es responsable de mantener su propia consistencia y de controlar las
+    operaciones que modifican su estado.
+
+  - Lógica de negocio: corresponde a las reglas y decisiones que coordinan el
+    comportamiento del sistema para cumplir un objetivo del dominio, especialmente
+    cuando involucran varias entidades, servicios o conceptos y no pertenecen
+    exclusivamente a una sola entidad.
+
+Resultado: Se creó la clase ClienteServicio (Modelo/Servicios/ClienteServicio.py)
+moviendo métodos como realizar_pedido a la capa de servicios, dejando en la
+entidad Cliente solo la gestión de su propio estado (datos, validaciones,
+invariantes).
+
+--------------------------------------------------------------------------------
+PROMPT #2 - Aplicar la misma refactorización a las demás entidades
+--------------------------------------------------------------------------------
+
+Aplicar el mismo patrón de separación (lógica de entidad vs. lógica de negocio)
+a todas las demás entidades del proyecto, siguiendo los mismos criterios usados
+en el Prompt #1.
+
+Resultado: Se refactorizaron las entidades restantes (Pedido, Restaurante,
+Usuario, Repartidor, etc.), creando sus respectivos servicios en
+Modelo/Servicios/ y manteniendo en cada entidad solo la lógica propia de su
+estado y consistencia interna.
+
+--------------------------------------------------------------------------------
+PROMPT #3 - Crear repositorios para cada entidad (CRUD + métodos extra)
+--------------------------------------------------------------------------------
+
+Crear repositorios en la carpeta "Acceso a Datos/" para cada entidad, con
+métodos CRUD nombrados en español (crear, obtener_por_id/cedula, obtener_todos,
+actualizar, eliminar).
+
+Métodos extra solicitados:
+
+  Pedidos (PedidoRepositorio):
+    - rest_con_mas_pedidos(): Restaurante
+    - monto_total_vendido_por_rest(int cedula_juridica): float
+    - monto_total_vendido(): float
+    - rest_con_menos_pedidos(): Restaurante
+    - pedidos_por_cliente(int cedula_cliente): List[Pedido]
+    - cliente_con_mas_pedidos(): Cliente
+    - obtener_hora_pico(): datetime
+
+  Repartidor (RepartidorRepositorio):
+    - obtener_quejas_por_repartidor(int cedula): List[str]
+
+Resultado: Se crearon 6 repositorios en "Acceso a Datos/":
+  - ClienteRepositorio.py
+  - RepartidorRepositorio.py
+  - RestauranteRepositorio.py
+  - PedidoRepositorio.py
+  - ComboRepositorio.py
+  - FacturaRepositorio.py
+
+--------------------------------------------------------------------------------
+PROMPT #4 - Inyectar repositorios en servicios y agregar métodos de reporte
+--------------------------------------------------------------------------------
+
+Inyectar los repositorios en los servicios existentes (cambiar de @staticmethod
+a métodos de instancia con inyección de dependencias por constructor).
+Actualizar los métodos existentes para que persistan datos vía repositorios.
+Agregar los métodos de reporte nuevos que delegan al repositorio correspondiente.
+
+Cambios realizados:
+
+  ClienteServicio (actualizado):
+    - Constructor recibe: ClienteRepositorio, PedidoRepositorio
+    - realizar_pedido() ahora persiste el pedido con pedido_repo.crear()
+    - Nuevos: pedidos_por_cliente(), cliente_con_mas_pedidos()
+
+  PedidoServicio (actualizado):
+    - Constructor recibe: PedidoRepositorio
+    - Métodos existentes convertidos de @staticmethod a instancia
+    - Nuevos: rest_con_mas_pedidos(), rest_con_menos_pedidos(),
+      monto_total_vendido_por_rest(), monto_total_vendido(),
+      pedidos_por_cliente(), cliente_con_mas_pedidos(), obtener_hora_pico()
+
+  RepartidorServicio (actualizado):
+    - Constructor recibe: RepartidorRepositorio
+    - Nuevo: obtener_quejas_por_repartidor()
+
+  RestauranteServicio (nuevo):
+    - Constructor recibe: RestauranteRepositorio
+    - Métodos: registrar_restaurante(), agregar_combo_a_restaurante(),
+      obtener_menu()
+
+Patrón: Controlador → Servicio(repo) → Repositorio → Lista en memoria
+
+--------------------------------------------------------------------------------
+PROMPT #5 - Manejo de errores y excepciones personalizadas
+--------------------------------------------------------------------------------
+
+Implementar un manejo de errores robusto a través de una jerarquía de excepciones
+personalizadas usando herencia y polimorfismo, aplicándolo en las distintas capas.
+
+Cambios realizados:
+
+  1. Modelo/Excepciones.py (Nueva jerarquía base: CletaEatsError):
+     - ValidacionError (CedulaInvalida, CorreoInvalido, etc.)
+     - RegistroDuplicadoError (ClienteDuplicado, RepartidorDuplicado, etc.)
+     - EstadoInvalidoError (ClienteSuspendido, TransicionEstadoInvalida, etc.)
+     - RecursoNoDisponibleError (SinRepartidorDisponible, EntidadNoEncontrada)
+     - ReglaNegocioError (RestauranteInconsistente, PedidoSinRepartidor)
+     - InfraestructuraError (ArchivoNoEncontrado, ArchivoCorrupto, IntegridadDatos)
+
+  2. Validaciones en Entidades (a través de setters / constructores):
+     - Usuario: formato y valores de cédula, correo, teléfono y tarjeta.
+     - Repartidor: amonestaciones negativas, kilómetros negativos.
+     - Restaurante: tipo de comida vacío, combos duplicados (ComboDuplicadoError).
+     - Combo: validación de rango (1-9) y cálculo correcto del precio.
+     - Pedido: transiciones de estado, exigencia de repartidor para avanzar, validación de tiempos de entrega.
+     - Factura: subtotales, IVA, transporte y totales no negativos.
+
+  3. Repositorios actualizados:
+     - Reemplazo de ValueError por excepciones de duplicidad (ClienteDuplicadoError, RestauranteDuplicadoError, etc.).
+
+  4. Servicios actualizados:
+     - ClienteServicio: EntidadNoEncontradaError (cliente no existe), ClienteSuspendidoError, ReglaNegocioError (combos de distintos restaurantes).
+     - PedidoServicio: RepartidorNoDisponibleError, SinRepartidorDisponibleError.
+     - Reportes vacíos: RecursoNoDisponibleError si la consulta devuelve None.
