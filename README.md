@@ -1,6 +1,6 @@
 # CletaEats
 
-Este es el prototipo para el sistema de pedidos y gestión de repartidores "CletaEats". El proyecto está construido bajo una arquitectura limpia (Vista, Controlador, Servicio, Entidades) utilizando Python y Streamlit.
+Este es el prototipo para el sistema de pedidos y gestión de repartidores "CletaEats". El proyecto está construido bajo una variante de MVC (Vista, Controlador, Servicio, Entidades) utilizando Python y Streamlit.
 
 ## Requisitos Previos
 
