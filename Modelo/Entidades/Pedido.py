@@ -126,6 +126,9 @@ class Pedido:
         if self.__estado == EstadoDelPedido.ENTREGADO:
             raise TransicionEstadoInvalidaError("No se puede cambiar el estado de un pedido entregado.")
 
+        if p_estado == EstadoDelPedido.ENTREGADO and self.__estado != EstadoDelPedido.EN_CAMINO:
+            raise TransicionEstadoInvalidaError("Solo se puede entregar un pedido que esté EN_CAMINO.")
+
         if p_estado in (EstadoDelPedido.EN_CAMINO, EstadoDelPedido.ENTREGADO):
             if not self.tiene_repartidor():
                 raise PedidoSinRepartidorError("No se puede avanzar el pedido sin un repartidor asignado.")

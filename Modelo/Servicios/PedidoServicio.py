@@ -76,14 +76,37 @@ class PedidoServicio:
         factura.calcular_total()
         return factura
 
-    def entregar_pedido(self, p_pedido: Pedido):
+    def entregar_pedido(self, p_pedido: Pedido, amabilidad: int = 5, tiempo_de_respuesta: int = 5, presentacion: int = 5):
         """
         Lógica de negocio: marca el pedido como entregado y libera
         al repartidor. Coordina entre Pedido y Repartidor.
+        Evalúa al repartidor (calificación y contador de pedidos)
+        al momento de la entrega.
         """
         p_pedido.cambiar_estado(EstadoDelPedido.ENTREGADO)
         if p_pedido.tiene_repartidor():
             p_pedido.repartidor.actualizar_disponibilidad(True)
+            p_pedido.repartidor.calificacion.incrementar_pedidos()
+            
+            calif = p_pedido.repartidor.calificacion
+            n = calif.num_de_pedidos_hechos
+            if n == 1:
+                calif.amabilidad = float(amabilidad)
+                calif.tiempo_de_respuesta = float(tiempo_de_respuesta)
+                calif.presentacion = float(presentacion)
+            else:
+                calif.amabilidad = ((calif.amabilidad * (n - 1)) + amabilidad) / n
+                calif.tiempo_de_respuesta = ((calif.tiempo_de_respuesta * (n - 1)) + tiempo_de_respuesta) / n
+                calif.presentacion = ((calif.presentacion * (n - 1)) + presentacion) / n
+                
+            calif.calcular_promedio()
+            p_pedido.repartidor.registrar_km_recorridos(p_pedido.distancia_km)
+
+    def actualizar_estado(self, p_pedido: Pedido, nuevo_estado: EstadoDelPedido):
+        """
+        Lógica de negocio: actualiza el estado del pedido a EN_CAMINO o SUSPENDIDO.
+        """
+        p_pedido.cambiar_estado(nuevo_estado)
 
     # ── Métodos de reporte (delegan al repositorio) ───────────────────
 

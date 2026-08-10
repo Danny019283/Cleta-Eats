@@ -111,15 +111,23 @@ def test_entregar_pedido_con_repartidor():
 
     pedido_mock = MagicMock()
     pedido_mock.tiene_repartidor.return_value = True
+    pedido_mock.distancia_km = 5.0
+    
+    calificacion_mock = MagicMock()
+    calificacion_mock.num_de_pedidos_hechos = 1
+    
     repartidor_mock = MagicMock()
+    repartidor_mock.calificacion = calificacion_mock
     pedido_mock.repartidor = repartidor_mock
 
     # Act
-    servicio.entregar_pedido(pedido_mock)
+    servicio.entregar_pedido(pedido_mock, 9, 8, 7)
 
     # Assert
     pedido_mock.cambiar_estado.assert_called_once_with(EstadoDelPedido.ENTREGADO)
     repartidor_mock.actualizar_disponibilidad.assert_called_once_with(True)
+    repartidor_mock.registrar_km_recorridos.assert_called_once_with(5.0)
+    calificacion_mock.calcular_promedio.assert_called_once()
 
 
 def test_entregar_pedido_sin_repartidor():

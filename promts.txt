@@ -152,3 +152,137 @@ Resultado:
   - Se crearon 4 archivos de pruebas: `test_cliente_servicio.py`, `test_pedido_servicio.py`, `test_repartidor_servicio.py`, y `test_restaurante_servicio.py`.
   - Se diseñaron 31 pruebas en total, simulando dependencias con mocks, validando excepciones correctas, y confirmando flujos de orquestación (ej: `generar_factura()`, `crear()` llamado al final del flujo, o no llamado en caso de error).
   - Resultados de la ejecución: 31/31 pasaron exitosamente.
+
+--------------------------------------------------------------------------------
+PROMPT #7 - Implementación de controladores
+--------------------------------------------------------------------------------
+
+Implementar la capa de controladores como frontera entre la vista (Streamlit,
+a implementar por separado) y los servicios/casos de uso existentes.
+
+Restricciones:
+  - El controlador NO importa Streamlit ni renderiza componentes visuales.
+  - Recibe DTOs inmutables (frozen dataclasses) y devuelve ResultadoDTO.
+  - Delega la operación real a los servicios inyectados por constructor.
+  - Convierte excepciones de dominio (CletaEatsError) en ResultadoDTO con
+    exitoso=False, permitiendo que la vista decida cómo representar el error.
+  - No duplica lógica de negocio ni accede directamente a repositorios cuando
+    existe un servicio encargado de la operación.
+
+Archivos creados en Controladores/:
+
+  1. DTOs.py (Data Transfer Objects):
+     - Entrada: CrearClienteDTO, CrearRepartidorDTO, CrearRestauranteDTO,
+       CrearComboDTO, RealizarPedidoDTO, AsignarRepartidorDTO,
+       EntregarPedidoDTO, QuejaRepartidorDTO, CalcularPagoDTO.
+     - Salida: ResultadoDTO (exitoso: bool, mensaje: str, datos: Optional).
+
+  2. ClienteController.py:
+     - Dependencias: ClienteServicio, ClienteRepositorio, PedidoRepositorio,
+       RestauranteRepositorio.
+     - Métodos: registrar_cliente(), realizar_pedido(),
+       obtener_pedidos_por_cliente(), obtener_cliente_con_mas_pedidos(),
+       obtener_todos_los_clientes().
+
+  3. PedidoController.py:
+     - Dependencias: PedidoServicio, PedidoRepositorio, RepartidorRepositorio.
+     - Métodos: asignar_repartidor(), asignar_repartidor_automatico(),
+       entregar_pedido(), obtener_restaurante_con_mas_pedidos(),
+       obtener_restaurante_con_menos_pedidos(),
+       obtener_monto_total_por_restaurante(), obtener_monto_total_vendido(),
+       obtener_hora_pico(), obtener_todos_los_pedidos().
+
+  4. RepartidorController.py:
+     - Dependencias: RepartidorServicio, RepartidorRepositorio.
+     - Métodos: registrar_repartidor(), registrar_queja(),
+       calcular_pago_diario(), obtener_quejas(),
+       obtener_todos_los_repartidores().
+
+  5. RestauranteController.py:
+     - Dependencias: RestauranteServicio, RestauranteRepositorio.
+     - Métodos: registrar_restaurante(), agregar_combo(), obtener_menu(),
+       obtener_todos_los_restaurantes().
+
+Patrón: Vista → Controlador(DTOs) → Servicio(entidades) → Repositorio
+
+--------------------------------------------------------------------------------
+PROMPT #8 - Implementación de vistas / frontend con Streamlit
+--------------------------------------------------------------------------------
+
+Implementar la capa de vistas utilizando Streamlit, consumiendo exclusivamente
+la interfaz pública de los controladores existentes.
+
+Restricciones:
+  - La vista NO contiene lógica de negocio ni accede a repositorios.
+  - Construye DTOs a partir de las entradas del usuario y los envía al controlador.
+  - Interpreta el ResultadoDTO devuelto para decidir cómo representar la respuesta
+    (st.success, st.error, st.warning, st.info, st.metric, etc.).
+  - Separación en funciones pequeñas y cohesionadas por responsabilidad visual.
+
+Archivos creados:
+
+  1. app.py (punto de entrada):
+     - Configura paths del proyecto.
+     - Bootstrap: instancia repositorios → servicios → controladores una vez
+       por sesión usando st.session_state.
+     - Navegación lateral con radio buttons.
+     - Delega el renderizado a las vistas correspondientes.
+
+  2. Vistas/cliente_vista.py:
+     - Tabs: Registrar Cliente, Realizar Pedido, Clientes Registrados.
+     - Formulario de pedido con selección dinámica de restaurante y combos.
+
+  3. Vistas/restaurante_vista.py:
+     - Tabs: Registrar Restaurante, Agregar Combo, Ver Menú, Restaurantes Registrados.
+     - Precio de combo calculado automáticamente según regla del dominio.
+
+  4. Vistas/repartidor_vista.py:
+     - Tabs: Registrar Repartidor, Registrar Queja, Calcular Pago, Repartidores Registrados.
+     - Sliders para calificación (amabilidad, tiempo respuesta, presentación).
+
+  5. Vistas/pedido_vista.py:
+     - Tabs: Asignar Repartidor (manual/automático), Entregar Pedido, Pedidos Registrados.
+     - Emojis de estado para los pedidos (🟡 preparación, 🔵 en camino, 🟢 entregado, 🔴 suspendido).
+
+  6. Vistas/reportes_vista.py:
+     - Reportes: cliente con más pedidos, restaurante con más/menos pedidos,
+       monto total vendido, hora pico, pedidos por cliente.
+
+Ejecución: streamlit run app.py
+
+--------------------------------------------------------------------------------
+PROMPT #9 - Datos quemados y corrección de reglas
+--------------------------------------------------------------------------------
+
+Se creó el archivo datos_quemados.py que pobla el sistema con 7 restaurantes 
+(9 combos c/u), 5 clientes, 3 repartidores, 5 pedidos y 3 quejas al iniciar
+la sesión en app.py. 
+
+--------------------------------------------------------------------------------
+PROMPT #10 - Implementación de Casos de Uso faltantes (CU-03, 11, 13, 15-30)
+--------------------------------------------------------------------------------
+
+Se completó la interfaz y los controladores para alinearse con los CU del PDF:
+
+1. CU-03 Cambiar estado de Cliente:
+   - Se agregó `CambiarEstadoClienteDTO`.
+   - Se agregó `ClienteController.cambiar_estado()`.
+   - Se agregó la pestaña "Cambiar Estado" en `cliente_vista.py`.
+
+2. CU-11 Actualizar estado de Pedido:
+   - Se agregó `ActualizarEstadoPedidoDTO`.
+   - Se agregó `PedidoController.actualizar_estado()`.
+   - Se agregó la pestaña "Actualizar Estado" en `pedido_vista.py` para pasar
+     pedidos a EN_CAMINO o SUSPENDIDO.
+
+3. CU-13 Calificar Repartidor al Entregar:
+   - Se quitaron los sliders de calificación inicial en `repartidor_vista.py`
+     y se inicializan en 0 (CU-06).
+   - Se agregaron los sliders a la vista de "Entregar Pedido" en `pedido_vista.py`
+     para calificar únicamente al recibir.
+   - `PedidoServicio.entregar_pedido()` actualiza el promedio correctamente.
+
+4. CU-15 a 30 (Listados Específicos e, f, g):
+   - Se agregaron tres pestañas en la sección inferior de `reportes_vista.py`
+     para mostrar específicamente: Clientes Activos, Clientes Suspendidos,
+     y Repartidores con 0 amonestaciones.
