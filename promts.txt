@@ -133,3 +133,22 @@ Cambios realizados:
      - ClienteServicio: EntidadNoEncontradaError (cliente no existe), ClienteSuspendidoError, ReglaNegocioError (combos de distintos restaurantes).
      - PedidoServicio: RepartidorNoDisponibleError, SinRepartidorDisponibleError.
      - Reportes vacíos: RecursoNoDisponibleError si la consulta devuelve None.
+
+--------------------------------------------------------------------------------
+PROMPT #6 - Pruebas unitarias para los servicios
+--------------------------------------------------------------------------------
+
+Crear pruebas unitarias para los servicios del proyecto Python usando `pytest`.
+
+Reglas y consideraciones:
+  - Validar reglas de negocio y condiciones de error sin modificar archivos de producción.
+  - Aislamiento de servicios: usar `unittest.mock` (`MagicMock`) para los repositorios.
+  - No usar bases de datos reales, SQLite, ni archivos; enfocado 100% en pruebas unitarias de la lógica.
+  - Verificar tanto casos exitosos como excepciones (negativas) y que los repositorios sean llamados con los métodos y argumentos correctos.
+  - Comprobar que en casos de error no se llamen operaciones subsecuentes o el `guardar()` del repositorio.
+
+Resultado:
+  - Se creó la carpeta `tests/` con configuración `conftest.py` para la inclusión de paths.
+  - Se crearon 4 archivos de pruebas: `test_cliente_servicio.py`, `test_pedido_servicio.py`, `test_repartidor_servicio.py`, y `test_restaurante_servicio.py`.
+  - Se diseñaron 31 pruebas en total, simulando dependencias con mocks, validando excepciones correctas, y confirmando flujos de orquestación (ej: `generar_factura()`, `crear()` llamado al final del flujo, o no llamado en caso de error).
+  - Resultados de la ejecución: 31/31 pasaron exitosamente.
