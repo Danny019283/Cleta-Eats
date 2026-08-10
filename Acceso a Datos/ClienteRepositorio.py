@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+import pickle
 from Cliente import Cliente
 from Excepciones import ClienteDuplicadoError
+from Database import DatabaseConnection
 
 
 class ClienteRepositorio:
@@ -13,7 +15,24 @@ class ClienteRepositorio:
     """
 
     def __init__(self):
-        self.__clientes: List[Cliente] = []
+        self.db = DatabaseConnection()
+        self.__clientes: List[Cliente] = self._cargar()
+
+    def _cargar(self) -> List[Cliente]:
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("SELECT data FROM store WHERE key = 'clientes'")
+            row = cursor.fetchone()
+            if row:
+                return pickle.loads(row[0])
+            return []
+
+    def _guardar(self):
+        """Guarda el estado actual en la base de datos."""
+        with self.db.get_connection() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO store (key, data) VALUES (?, ?)",
+                ('clientes', pickle.dumps(self.__clientes))
+            )
 
     # ── CRUD ──────────────────────────────────────────────────────────
 
@@ -24,6 +43,7 @@ class ClienteRepositorio:
                 f"Ya existe un cliente con la cédula {p_cliente.cedula}"
             )
         self.__clientes.append(p_cliente)
+        self._guardar()
 
     def obtener_por_cedula(self, p_cedula: int) -> Optional[Cliente]:
         """Busca y retorna un cliente por su cédula, o None si no existe."""
@@ -44,6 +64,7 @@ class ClienteRepositorio:
         for i, cliente in enumerate(self.__clientes):
             if cliente.cedula == p_cliente.cedula:
                 self.__clientes[i] = p_cliente
+                self._guardar()
                 return True
         return False
 

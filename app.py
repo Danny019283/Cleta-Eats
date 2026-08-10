@@ -60,7 +60,8 @@ def _inicializar_sistema():
     restaurante_repo = RestauranteRepositorio()
 
     # Datos quemados (seed data)
-    cargar_datos_quemados(cliente_repo, repartidor_repo, restaurante_repo, pedido_repo)
+    if not restaurante_repo.obtener_todos():
+        cargar_datos_quemados(cliente_repo, repartidor_repo, restaurante_repo, pedido_repo)
 
     # Servicios
     cliente_servicio = ClienteServicio(cliente_repo, pedido_repo)

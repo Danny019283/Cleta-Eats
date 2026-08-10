@@ -5,9 +5,11 @@ from datetime import datetime
 from typing import List, Optional
 
 from Cliente import Cliente
+import pickle
 from Pedido import Pedido
 from Restaurante import Restaurante
 from Excepciones import PedidoDuplicadoError
+from Database import DatabaseConnection
 
 
 class PedidoRepositorio:
@@ -18,7 +20,23 @@ class PedidoRepositorio:
     """
 
     def __init__(self):
-        self.__pedidos: List[Pedido] = []
+        self.db = DatabaseConnection()
+        self.__pedidos: List[Pedido] = self._cargar()
+
+    def _cargar(self) -> List[Pedido]:
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("SELECT data FROM store WHERE key = 'pedidos'")
+            row = cursor.fetchone()
+            if row:
+                return pickle.loads(row[0])
+            return []
+
+    def _guardar(self):
+        with self.db.get_connection() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO store (key, data) VALUES (?, ?)",
+                ('pedidos', pickle.dumps(self.__pedidos))
+            )
 
     # ── CRUD ──────────────────────────────────────────────────────────
 
@@ -29,6 +47,7 @@ class PedidoRepositorio:
                 f"Ya existe un pedido con el id {p_pedido.id}"
             )
         self.__pedidos.append(p_pedido)
+        self._guardar()
 
     def obtener_por_id(self, p_id: int) -> Optional[Pedido]:
         """Busca y retorna un pedido por su id, o None si no existe."""
@@ -49,6 +68,7 @@ class PedidoRepositorio:
         for i, pedido in enumerate(self.__pedidos):
             if pedido.id == p_pedido.id:
                 self.__pedidos[i] = p_pedido
+                self._guardar()
                 return True
         return False
 
@@ -60,6 +80,7 @@ class PedidoRepositorio:
         for i, pedido in enumerate(self.__pedidos):
             if pedido.id == p_id:
                 self.__pedidos.pop(i)
+                self._guardar()
                 return True
         return False
 

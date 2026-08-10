@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+import pickle
 from Repartidor import Repartidor
 from Excepciones import RepartidorDuplicadoError, EntidadNoEncontradaError
+from Database import DatabaseConnection
 
 
 class RepartidorRepositorio:
@@ -13,7 +15,23 @@ class RepartidorRepositorio:
     """
 
     def __init__(self):
-        self.__repartidores: List[Repartidor] = []
+        self.db = DatabaseConnection()
+        self.__repartidores: List[Repartidor] = self._cargar()
+
+    def _cargar(self) -> List[Repartidor]:
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("SELECT data FROM store WHERE key = 'repartidores'")
+            row = cursor.fetchone()
+            if row:
+                return pickle.loads(row[0])
+            return []
+
+    def _guardar(self):
+        with self.db.get_connection() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO store (key, data) VALUES (?, ?)",
+                ('repartidores', pickle.dumps(self.__repartidores))
+            )
 
     # ── CRUD ──────────────────────────────────────────────────────────
 
@@ -24,6 +42,7 @@ class RepartidorRepositorio:
                 f"Ya existe un repartidor con la cédula {p_repartidor.cedula}"
             )
         self.__repartidores.append(p_repartidor)
+        self._guardar()
 
     def obtener_por_cedula(self, p_cedula: int) -> Optional[Repartidor]:
         """Busca y retorna un repartidor por su cédula, o None si no existe."""
@@ -44,6 +63,7 @@ class RepartidorRepositorio:
         for i, repartidor in enumerate(self.__repartidores):
             if repartidor.cedula == p_repartidor.cedula:
                 self.__repartidores[i] = p_repartidor
+                self._guardar()
                 return True
         return False
 
@@ -55,6 +75,7 @@ class RepartidorRepositorio:
         for i, repartidor in enumerate(self.__repartidores):
             if repartidor.cedula == p_cedula:
                 self.__repartidores.pop(i)
+                self._guardar()
                 return True
         return False
 

@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+import pickle
 from Restaurante import Restaurante
 from Excepciones import RestauranteDuplicadoError
+from Database import DatabaseConnection
 
 
 class RestauranteRepositorio:
@@ -13,7 +15,23 @@ class RestauranteRepositorio:
     """
 
     def __init__(self):
-        self.__restaurantes: List[Restaurante] = []
+        self.db = DatabaseConnection()
+        self.__restaurantes: List[Restaurante] = self._cargar()
+
+    def _cargar(self) -> List[Restaurante]:
+        with self.db.get_connection() as conn:
+            cursor = conn.execute("SELECT data FROM store WHERE key = 'restaurantes'")
+            row = cursor.fetchone()
+            if row:
+                return pickle.loads(row[0])
+            return []
+
+    def _guardar(self):
+        with self.db.get_connection() as conn:
+            conn.execute(
+                "INSERT OR REPLACE INTO store (key, data) VALUES (?, ?)",
+                ('restaurantes', pickle.dumps(self.__restaurantes))
+            )
 
     # ── CRUD ──────────────────────────────────────────────────────────
 
@@ -25,6 +43,7 @@ class RestauranteRepositorio:
                 f"{p_restaurante.cedula_juridica}"
             )
         self.__restaurantes.append(p_restaurante)
+        self._guardar()
 
     def obtener_por_cedula_juridica(
         self, p_cedula_juridica: int
@@ -47,6 +66,7 @@ class RestauranteRepositorio:
         for i, restaurante in enumerate(self.__restaurantes):
             if restaurante.cedula_juridica == p_restaurante.cedula_juridica:
                 self.__restaurantes[i] = p_restaurante
+                self._guardar()
                 return True
         return False
 
@@ -58,5 +78,6 @@ class RestauranteRepositorio:
         for i, restaurante in enumerate(self.__restaurantes):
             if restaurante.cedula_juridica == p_cedula_juridica:
                 self.__restaurantes.pop(i)
+                self._guardar()
                 return True
         return False
